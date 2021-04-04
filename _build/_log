@@ -1,0 +1,12 @@
+### Starting build.
+# Target: lexer_2.ml.depends, tags: { pp(camlp4of), extension:ml, file:lexer_2.ml, ocaml, ocamldep, quiet, traverse, use_camlp4 }
+/home/mrtin/.opam/4.11.1/bin/ocamldep.opt -pp camlp4of -modules lexer_2.ml > lexer_2.ml.depends
+# Target: token.ml.depends, tags: { extension:ml, file:token.ml, ocaml, ocamldep, quiet, traverse }
+/home/mrtin/.opam/4.11.1/bin/ocamldep.opt -modules token.ml > token.ml.depends # cached
+# Target: token.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:token.cmo, file:token.ml, implem, ocaml, quiet, traverse }
+/home/mrtin/.opam/4.11.1/bin/ocamlc.opt -c -o token.cmo token.ml # cached
+# Target: lexer_2.cmo, tags: { pp(camlp4of), byte, compile, extension:cmo, extension:ml, file:lexer_2.cmo, file:lexer_2.ml, implem, ocaml, quiet, traverse, use_camlp4 }
+/home/mrtin/.opam/4.11.1/bin/ocamlc.opt -c -I /home/mrtin/.opam/4.11.1/lib/ocaml/camlp4 -pp camlp4of -o lexer_2.cmo lexer_2.ml
+# Target: lexer_2.byte, tags: { byte, dont_link_with, extension:byte, file:lexer_2.byte, link, ocaml, program, quiet, traverse }
+/home/mrtin/.opam/4.11.1/bin/ocamlc.opt token.cmo lexer_2.cmo -o lexer_2.byte
+# Compilation successful.
