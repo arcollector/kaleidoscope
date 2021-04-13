@@ -22,6 +22,7 @@ let rec lex = parser
 
   (* comment until end of line *)
   | [< ' ('#'); stream >] ->
+    if !debug then print_string "comment\n" ;
     lex_comment stream
 
   | [< ' char; stream >] ->
@@ -47,19 +48,25 @@ and lex_ident buffer = parser
 
 and lex_number buffer = parser
   | [< ' ('0' .. '9' | '.' as char) ; stream >] ->
-    if !debug then print_string "\number-eating\n" ;
+    if !debug then print_string "\tnumber-eating\n" ;
     Buffer.add_char buffer char ;
     lex_number buffer stream
   | [< stream >] ->
-    if !debug then print_string "\number-done\n" ;
+    if !debug then print_string "\tnumber-done\n" ;
     [< 'Token.Number (float_of_string(Buffer.contents buffer)); lex stream >]
 
 and lex_comment = parser
   (* reached comment ends *)
-  | [< ' ('\n') ; stream >] -> lex stream
+  | [< ' ('\n') ; stream >] ->
+    if !debug then print_string "\tcomment-done\n" ;
+    lex stream
   (* keep eating comment chars *)
-  | [< ' c; stream >] -> lex_comment stream
-  | [< >] -> [< >]
+  | [< ' c; stream >] ->
+    if !debug then print_string "\tcomment-eating\n" ;
+    lex_comment stream
+  | [< >] ->
+    if !debug then print_string "\tcomment-eof\n" ;
+    [< >]
 
 
 let _ =
@@ -92,8 +99,9 @@ let _ =
         Stream.junk stream_parsed ;
         print_string "[Token.Number] " ; string_of_float n |> print_string ; print_newline () ;
         print_stream ()
-      | _ ->
-        Stream.count stream_parsed |> string_of_int |> print_string ; print_newline () ;
-        failwith "oops"
+      | Some (Token.Extern) ->
+        Stream.junk stream_parsed ;
+        print_string "[Token.Extern]\n" ;
+        print_stream ()
   in
   print_stream ()
