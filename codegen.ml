@@ -11,6 +11,7 @@ let double_type = double_type context
 let rec codegen_expr = function
   | Ast.Number n -> const_float double_type n
   | Ast.Variable name ->
+    (* returns value of the referenced variable *)
     (try Hashtbl.find named_values name with
       | Not_found -> raise (Error "unknown variable name")
     )
@@ -19,11 +20,11 @@ let rec codegen_expr = function
     let rhs_val = codegen_expr rhs in
     begin
       match op with
-      | '+' -> build_add lhs_val rhs_val "addtmp" builder
-      | '-' -> build_sub lhs_val rhs_val "subtmp" builder
-      | '*' -> build_mul lhs_val rhs_val "multmp" builder
+      | '+' -> build_fadd lhs_val rhs_val "addtmp" builder
+      | '-' -> build_fsub lhs_val rhs_val "subtmp" builder
+      | '*' -> build_fmul lhs_val rhs_val "multmp" builder
       | '<' ->
-        (* Covert bool 0/1 to double 0.0 or 1.0 *)
+        (* Covert bool 0 or 1 to double 0.0 or 1.0 *)
         let i = build_fcmp Fcmp.Ult lhs_val rhs_val "cmptmp" builder in
         build_uitofp i double_type "booltmp" builder
       | _ -> raise (Error "invalid binary operator")
@@ -75,7 +76,7 @@ let codegen_proto = function
     
     f
 
-let codegen_func = function
+let codegen_func the_fpm = function
   | Ast.Function (proto, body) ->
     Hashtbl.clear named_values;
     let the_function = codegen_proto proto in
@@ -86,10 +87,16 @@ let codegen_func = function
 
     try
       let ret_val = codegen_expr body in
+
       (* Finish off the function *)
       let _ = build_ret ret_val builder in
+
       (* Validate the generated code, checking for consistency *)
       Llvm_analysis.assert_valid_function the_function;
+
+      (* Optimize the function *)
+      let _ = PassManager.run_function the_function the_fpm in
+
       the_function
     with e ->
       delete_function the_function;

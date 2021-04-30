@@ -117,8 +117,17 @@ let parse_definition = parser
 (* toplevelexpr ::= expression *)
 let parse_toplevel = parser
   | [< e=parse_expr >] ->
-    (* Make an anoymous proto (function without name and not arguments) *)
-    Ast.Function (Ast.Prototype ("", [||]), e)
+    (* Make an anoymous proto (function with random name and not arguments) *)
+    let gen_passwd length =
+      let gen () = match Random.int(26+26+10) with
+          n when n < 26 -> int_of_char 'a' + n
+        | n when n < 26 + 26 -> int_of_char 'A' + n - 26
+        | n -> int_of_char '0' + n - 26 - 26 in
+      let gen _ = String.make 1 (char_of_int(gen ())) in
+      "anonyme_fun_" ^ String.concat "" (Array.to_list (Array.init length gen))
+    in
+
+    Ast.Function (Ast.Prototype (gen_passwd 5, [||]), e)
 
 (* external ::= 'extern' prototype *)
 let parse_extern = parser
