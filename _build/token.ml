@@ -5,3 +5,6 @@ type token =
  | Ident of string | Number of float
  (* unknown *)
  | Kwd of char
+ (* control *)
+ | If | Then | Else
+ | For | In

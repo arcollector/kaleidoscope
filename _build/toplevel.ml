@@ -49,5 +49,5 @@ let rec main_loop the_fpm the_execution_engine stream =
         Stream.junk stream;
         print_endline s;
     end;
-    print_string "ready> ";
+    print_string "ready> "; flush stdout;
     main_loop the_fpm the_execution_engine stream

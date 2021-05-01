@@ -44,6 +44,43 @@ let rec parse_primary = parser
     in
     parse_ident id stream
 
+  (* ifexpr ::= 'if' expr 'then' expr 'else' expr *)
+  | [<
+    'Token.If; c=parse_expr;
+    'Token.Then ?? "expected 'then'"; t=parse_expr;
+    'Token.Else ?? "expected 'else'"; e=parse_expr
+  >] ->
+    Ast.If (c, t, e)
+
+  (* forexpr ::= 'for' identifier '=' expr ',' expr (',' expr)? 'in' expression *)
+  | [<
+    'Token.For;
+    'Token.Ident id ?? "expected identifier after for";
+    'Token.Kwd '=' ?? "expected '=' after for";
+    stream
+  >] ->
+    begin parser
+    | [<
+      start=parse_expr;
+      'Token.Kwd ',' ?? "expected ',' after for";
+      end_=parse_expr
+    >] ->
+      let step = begin parser
+      | [< 'Token.Kwd ',' ; step=parse_expr >] -> Some step
+      | [< >] -> None
+      end stream
+      in
+      begin parser
+      | [< 'Token.In; body=parse_expr >] ->
+        Ast.For (id, start, end_, step, body)
+      | [< >] ->
+        raise (Stream.Error "expected 'in' after for")
+      end stream
+
+    | [< >] ->
+      raise (Stream.Error "expected '=' after for")
+    end stream
+
   | [< >] ->
     raise (Stream.Error "unkown token when expecting an expression")
 
