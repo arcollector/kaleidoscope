@@ -30,8 +30,7 @@ let rec parse_primary = parser
         begin parser
           | [< 'Token.Kwd ','; e=parse_args (e::accumulator) >] -> e
           | [< >] -> e::accumulator
-        end
-        stream
+        end stream
       | [< >] -> accumulator
     in
     let rec parse_ident id = parser

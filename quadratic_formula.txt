@@ -1,0 +1,17 @@
+extern sqrt(x);
+extern sin(x);
+
+def negate(x)
+  x * sin(4.71239);
+
+def inv(x)
+  x * 0.1;
+
+def discriminant(a b c)
+  b*b -4*a*c;
+
+def quadratic(a b c)
+  (negate(b) + sqrt(discriminant(a, b, c))) * inv(2*a);
+
+
+quadratic(2, 100, 5);

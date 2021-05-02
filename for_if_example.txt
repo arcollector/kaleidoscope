@@ -1,0 +1,11 @@
+extern putchard(x);
+extern fmod(x y);
+
+def printstripe(n)
+  for i = 0, i < n in
+    if fmod(i, 2.0) < 1 then
+      putchard(42)
+    else
+      putchard(43);
+
+printstripe(100);
