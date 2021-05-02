@@ -83,6 +83,18 @@ let rec parse_primary = parser
   | [< >] ->
     raise (Stream.Error "unkown token when expecting an expression")
 
+(* unary
+ *    ::= primary
+ *    ::= '!' unary *)
+and parse_unary = parser
+  (* If this is a unary operator, read it *)
+  | [< 'Token.Kwd op when op != '(' && op != ')'; operand=parse_expr >] ->
+    Ast.Unary (op, operand)
+
+  (* If the current token is not an operator, it must be a primary expr *)
+  | [< stream >] ->
+    parse_primary stream
+
 (* binoprhs
  *    ::= ('+' primary)* *)
 and parse_bin_rhs expr_prec lhs stream =
@@ -95,8 +107,8 @@ and parse_bin_rhs expr_prec lhs stream =
       if token_prec < expr_prec then lhs else begin
         (* eat the binop *)
         Stream.junk stream;
-        (* parse the primary expression after the binary operator *)
-        let rhs = parse_primary stream in
+        (* parse the unary expression after the binary operator *)
+        let rhs = parse_unary stream in
         (* okay, we know this is a binop *)
         let rhs =
           match Stream.peek stream with
@@ -120,16 +132,26 @@ and parse_bin_rhs expr_prec lhs stream =
 (* expression
  *    ::= primary binoprhs *)
 and parse_expr = parser
-| [< lhs=parse_primary ; stream >] ->
-  parse_bin_rhs 0 lhs stream
+  | [< lhs=parse_unary ; stream >] ->
+    parse_bin_rhs 0 lhs stream
 
 (* prototype
- *    ::= id '(' id* ')' *)
+ *    ::= id '(' id* ')'
+ *    ::= binary LETTER number? (id, id) 
+ *    ::= unary LETTER number? (id) *)
 let parse_prototype =
-  (* this functions returns an array of id *)
+  (* this function returns an array of id *)
   let rec parse_args accumulator = parser
     | [< 'Token.Ident id; e=parse_args (id::accumulator) >] -> e
     | [< >] -> accumulator
+  in
+  let parse_operator = parser
+    | [< 'Token.Unary >] -> "unary", 1
+    | [< 'Token.Binary >] -> "binary", 2
+  in
+  let parse_binary_precedence = parser
+    | [< 'Token.Number n >] -> int_of_float n
+    | [< >] -> 30
   in
   parser
   | [<
@@ -140,6 +162,27 @@ let parse_prototype =
     >] ->
       (* success *)
       Ast.Prototype (id, Array.of_list (List.rev args))
+
+  | [<
+    (prefix, kind)=parse_operator;
+    'Token.Kwd op ?? "expected an operator";
+    (* Read the precedence if present *)
+    binary_precedence=parse_binary_precedence;
+    'Token.Kwd '(' ?? "expected '(' in prototype";
+    args=parse_args [];
+    'Token.Kwd ')' ?? "expected ')' in prototype"
+  >] ->
+    let name = prefix ^ (String.make 1 op) in
+    let args = Array.of_list (List.rev args) in
+
+    (* Verify right number of arguments for operator *)
+    if Array.length args != kind then
+      raise (Stream.Error "invalid number of operands for operator")
+    else
+      if kind == 1 then
+        Ast.Prototype (name, args)
+      else
+        Ast.BinOpPrototype (name, args, binary_precedence)
 
   | [< >] ->
     raise (Stream.Error "expected function name in prototype")
@@ -169,4 +212,3 @@ let parse_toplevel = parser
 let parse_extern = parser
   | [< 'Token.Extern; e=parse_prototype >] ->
     e
-
