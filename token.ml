@@ -10,3 +10,5 @@ type token =
   | For | In
   (* operators *)
   | Binary | Unary
+  (* var definiton *)
+  | Var

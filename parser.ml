@@ -8,7 +8,10 @@ let precedence c = try Hashtbl.find binop_precedence c with Not_found -> -1
 (* primary
  *    ::= identifier
  *    ::= numberexpr
- *    ::= parenexpr *)
+ *    ::= parenexpr
+ *    ::= ifexpr
+ *    ::= forexpr
+ *    ::= varexpr *)
 (* this funtion returns an Ast *)
 let rec parse_primary = parser 
   (* numberexpr ::= number *)
@@ -25,8 +28,6 @@ let rec parse_primary = parser
   | [< 'Token.Ident id; stream >] ->
     let rec parse_args accumulator = parser
       | [< e=parse_expr ; stream >] ->
-        (* el begin end es para hacer codigo imperactivo
-         * es como el ; pero agrupa varias lineas *)
         begin parser
           | [< 'Token.Kwd ','; e=parse_args (e::accumulator) >] -> e
           | [< >] -> e::accumulator
@@ -80,8 +81,39 @@ let rec parse_primary = parser
       raise (Stream.Error "expected '=' after for")
     end stream
 
+  (* varexpr
+   *    ::= 'var' indetifier ('=' expression?
+                  (',' identfier ('=' expression)?)* 'in' expression *)
+  | [<
+    'Token.Var;
+    (* At least one variable name is required *)
+    'Token.Ident id ?? "expected identifier after var";
+    init=parse_var_init;
+    var_names=parse_var_names [(id, init)];
+    (* At this point, we have to have 'in' *)
+    'Token.In ?? "expected 'in' keyword after 'var'";
+    body=parse_expr
+  >] ->
+    Ast.Var (Array.of_list (List.rev var_names), body)
+  
   | [< >] ->
     raise (Stream.Error "unkown token when expecting an expression")
+
+and parse_var_init = parser
+  (* read in the optional initializer *)
+  | [< 'Token.Kwd '='; e=parse_expr >] -> Some e
+  | [< >] -> None
+
+and parse_var_names accumulator = parser
+  | [<
+    'Token.Kwd ',';
+    'Token.Ident id ?? "expected identifier list after var";
+    init=parse_var_init;
+    e=parse_var_names ((id, init) :: accumulator)
+  >] ->
+    e
+  | [< >] ->
+    accumulator
 
 (* unary
  *    ::= primary
@@ -132,7 +164,7 @@ and parse_bin_rhs expr_prec lhs stream =
 (* expression
  *    ::= primary binoprhs *)
 and parse_expr = parser
-  | [< lhs=parse_unary ; stream >] ->
+  | [< lhs=parse_unary; stream >] ->
     parse_bin_rhs 0 lhs stream
 
 (* prototype
@@ -179,14 +211,13 @@ let parse_prototype =
     if Array.length args != kind then
       raise (Stream.Error "invalid number of operands for operator")
     else
-      if kind == 1 then
+      if kind = 1 then
         Ast.Prototype (name, args)
       else
         Ast.BinOpPrototype (name, args, binary_precedence)
 
   | [< >] ->
     raise (Stream.Error "expected function name in prototype")
-
 
 (* definition ::= 'def' prototype expression *)
 let parse_definition = parser

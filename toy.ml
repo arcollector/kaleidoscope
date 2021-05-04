@@ -12,6 +12,7 @@ let main () =
 
   (* Install tandard binary operators
    * 1 is the lowest precendence *)
+  Hashtbl.add Parser.binop_precedence '=' 2;
   Hashtbl.add Parser.binop_precedence '<' 10;
   Hashtbl.add Parser.binop_precedence '+' 20;
   Hashtbl.add Parser.binop_precedence '-' 20;
@@ -25,18 +26,21 @@ let main () =
   let the_execution_engine = create Codegen.the_module in
   let the_fpm = PassManager.create_function Codegen.the_module in
 
-  (* set up the optimizer pipeline *)
+  (* Set up the optimizer pipeline *)
+
+  (* Promote allocas to registers *)
+  add_memory_to_register_promotion the_fpm;
 
   (* Do simple "peephole" optimizations and bit-twiddling optzn *)
   add_instruction_combination the_fpm;
 
-  (* reassociate expressions *)
+  (* Reassociate expressions *)
   add_reassociation the_fpm;
 
-  (* eliminate common subexpressions *)
+  (* Eliminate common subexpressions *)
   add_gvn the_fpm;
 
-  (* simplify the control flow (deleting unreachable block, etc) *)
+  (* Simplify the control flow (deleting unreachable block, etc) *)
   add_cfg_simplification the_fpm;
 
   ignore(PassManager.initialize the_fpm);
