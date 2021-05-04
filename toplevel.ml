@@ -44,7 +44,9 @@ let rec main_loop the_fpm the_execution_engine stream =
         remove_module Codegen.the_module the_execution_engine;
         add_module  Codegen.the_module the_execution_engine;
 
-      with Stream.Error s ->
+      with
+      | Stream.Error s
+      | Codegen.Error s ->
         (* Skip token for error recovery *)
         Stream.junk stream;
         print_endline s;
